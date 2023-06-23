@@ -12,8 +12,11 @@ end
 
 
 function widget:Initialize()
+	widgetHandler:AddAction("build_wind_dense", build_wind_dense, nil, 'p')
 	widgetHandler:AddAction("build_mines", build_mines, nil, 'p')
 end
+
+
 
 
 local function has_value (tab, val)
@@ -55,12 +58,17 @@ function BuildPreset.is_building_type_secondary(self, name)
 end
 
 
-
-
 function build_mines()
 	preset = BuildPreset.new({'cormine1', 'armmine1'}, {'cormine2', 'armmine2'}, 1, 60, 4, 4, 0, 0)
 	build_preset(preset)
 end
+
+function build_wind_dense()
+	preset = BuildPreset.new({'armwin', 'corwin'}, {}, 47, 1, 7, 7, 4, 3)
+	build_preset(preset)
+end
+
+
 
 
 
