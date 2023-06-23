@@ -12,9 +12,11 @@ end
 
 
 function widget:Initialize()
+	widgetHandler:AddAction("build_wind_sparse", build_wind_sparse, nil, 'p')
 	widgetHandler:AddAction("build_wind_dense", build_wind_dense, nil, 'p')
 	widgetHandler:AddAction("build_mines", build_mines, nil, 'p')
 end
+
 
 
 
@@ -58,8 +60,14 @@ function BuildPreset.is_building_type_secondary(self, name)
 end
 
 
+
 function build_mines()
 	preset = BuildPreset.new({'cormine1', 'armmine1'}, {'cormine2', 'armmine2'}, 1, 60, 4, 4, 0, 0)
+	build_preset(preset)
+end
+
+function build_wind_sparse()
+	preset = BuildPreset.new({'armwin', 'corwin'}, {}, 47, 1, 7, 7, 2, 4)
 	build_preset(preset)
 end
 
@@ -67,6 +75,21 @@ function build_wind_dense()
 	preset = BuildPreset.new({'armwin', 'corwin'}, {}, 47, 1, 7, 7, 4, 3)
 	build_preset(preset)
 end
+
+function dump(o)
+   if type(o) == 'table' then
+      local s = '{ '
+      for k,v in pairs(o) do
+         if type(k) ~= 'number' then k = '"'..k..'"' end
+         s = s .. '['..k..'] = ' .. dump(v) .. ','
+      end
+      return s .. '} '
+   else
+      return tostring(o)
+   end
+end
+
+
 
 
 
@@ -88,8 +111,8 @@ function build_preset(preset)
 	mouseY = xyz_mouse[3]
 
 	-- Calculate the starting position of the grid based on the mouse cursor position
-	local gridStartX = mouseX - (panelSize + panelPadding) * (nRow / 2)
-	local gridStartY = mouseY - (panelSize + panelPadding) * (nCol / 2)
+	local gridStartX = mouseX - (panelSize + panelPadding) * ((nRow - 1) / 2)
+	local gridStartY = mouseY - (panelSize + panelPadding) * ((nCol - 1)/ 2)
 
 	builders = {}
 	for i, unitID in ipairs(Spring.GetSelectedUnits()) do
@@ -130,9 +153,27 @@ function build_preset(preset)
 		end
 		
 		if buildCmdID ~= nil then
-			local constructorX, _, constructorZ = Spring.GetUnitPosition(builderUnitID)
+
+			currentBuilderCommand = Spring.GetUnitCurrentCommand(builderUnitID)
+			local isCurrentCommandGuard = currentUnitCommand ~= nil and currentUnitCommand == CMD.GUARD
+			if isCurrentCommandGuard then
+				Spring.GiveOrderToUnit(builderUnitID, CMD.STOP, {}, {} )
+			end
 			
-			if constructorZ < mouseY then
+			local refX, _, refZ = Spring.GetUnitPosition(builderUnitID)
+			
+			unitCommands = Spring.GetUnitCommands(builderUnitID, -1)
+			if unitCommands ~= nil and #unitCommands > 0 then
+				lastCmd = unitCommands[#unitCommands]
+				if lastCmd['id'] < 0 then
+					refX = lastCmd['params'][1]
+					refZ = lastCmd['params'][3]
+				end
+			end
+			--Spring.Echo(unitCommands)
+			--Spring.Echo(dump())
+			
+			if refZ < mouseY then
 				rowLoopStart = 1
 				rowLoopEnd = nRow
 				rowLoopIt = 1
@@ -144,7 +185,7 @@ function build_preset(preset)
 			
 			local reverseRowAndColumn = false
 			
-			if constructorX < mouseX then
+			if refX < mouseX then
 				flip = false
 			else
 				flip = true
