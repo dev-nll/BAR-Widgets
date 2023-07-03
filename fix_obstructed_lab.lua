@@ -95,7 +95,7 @@ function fix_obstructed_lab()
 								last_x2 = x2
 								last_z2 = z2
 								last_check_minutes = Spring.GetGameSeconds() / 60
-							else if Spring.GetGameSeconds() / 60 - last_check_minutes > 0.03 then
+							elseif Spring.GetGameSeconds() / 60 - last_check_minutes > 0.03 then
 								if math.abs(x2 - last_x2) < 3 and math.abs(z2 - last_z2) < 3 then
 									-- unit has been stationary for a few seconds, force it out of the way.
 									Spring.GiveOrderToUnit(unit_id2, CMD.MOVE, {x2 - 65, y2, z2-65}, {})
@@ -116,7 +116,6 @@ function fix_obstructed_lab()
 			end
 		end
 	end
-end
 end
 
 
