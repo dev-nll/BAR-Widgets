@@ -5,21 +5,10 @@ function widget:GetInfo()
         author = "IM1",
         date = "June 2023",
         license = "GNU GPL, v2 or later",
-        enabled = true --  loaded by default?
+        enabled = true
     }
 end
 
-
-
-local function has_value (tab, val)
-    for index, value in ipairs(tab) do
-        if value == val then
-            return true
-        end
-    end
-
-    return false
-end
 
 
 
@@ -60,55 +49,51 @@ end
 
 
 
-
-
 local last_x2 = nil
 local last_z2 = nil
-local last_check_minutes = nil
-local last_moved_minutes = nil
-local moved_unit_id = nil
+local lastCheckMinutes = nil
+local lastMovedMinutes = nil
+local movedUnitID = nil
 
-function fix_obstructed_lab()
-	if last_moved_minutes ~= nil and Spring.GetGameSeconds() / 60 - last_moved_minutes > 0.06 then
-		Spring.GiveOrderToUnit(moved_unit_id, CMD.STOP, {}, {} )
+function fixObstructedLab()
+	if lastMovedMinutes ~= nil and Spring.GetGameSeconds() / 60 - lastMovedMinutes > 0.06 then
+		Spring.GiveOrderToUnit(movedUnitID, CMD.STOP, {}, {} )
 		last_x2 = nil
 		last_z2 = nil
-		last_check_minutes = nil
-		moved_unit_id = nil
-		last_moved_minutes = nil
+		lastCheckMinutes = nil
+		movedUnitID = nil
+		lastMovedMinutes = nil
 		return
 	end
 
-	for i,unit_id in ipairs(factories) do
-		UD = UnitDefs[Spring.GetUnitDefID(unit_id)]
+	for _,unitID in pairs(factories) do
+		UD = UnitDefs[Spring.GetUnitDefID(unitID)]
 		if UD ~= nil then
-			if UD.isFactory then
-				x, y, z = Spring.GetUnitPosition(unit_id)
-				local unitsInRange = Spring.GetUnitsInSphere(x, y, z, 58, Spring.GetMyTeamID()) -- get units on top of lab
-				for i,unit_id2 in ipairs(unitsInRange) do			
-					UD = UnitDefs[Spring.GetUnitDefID(unit_id2)]
-					if not UD.isBuilding then
-						local _, _, _, _, buildProgress = Spring.GetUnitHealth(unit_id2)
-						if buildProgress == 1 then -- filter out units under construction
-							x2, y2, z2 = Spring.GetUnitPosition(unit_id2)
-							if last_x2 == nil then
+			x, y, z = Spring.GetUnitPosition(unitID)
+			local unitsInRange = Spring.GetUnitsInSphere(x, y, z, 58, Spring.GetMyTeamID()) -- get units on top of lab
+			for i, unitID2 in ipairs(unitsInRange) do			
+				UD = UnitDefs[Spring.GetUnitDefID(unitID2)]
+				if not UD.isBuilding then
+					local _, _, _, _, buildProgress = Spring.GetUnitHealth(unitID2)
+					if buildProgress == 1 then -- filter out units under construction
+						x2, y2, z2 = Spring.GetUnitPosition(unitID2)
+						if last_x2 == nil then
+							last_x2 = x2
+							last_z2 = z2
+							lastCheckMinutes = Spring.GetGameSeconds() / 60
+						elseif Spring.GetGameSeconds() / 60 - lastCheckMinutes > 0.03 then
+							if math.abs(x2 - last_x2) < 3 and math.abs(z2 - last_z2) < 3 then
+								-- unit has been stationary for a few seconds, force it out of the way.
+								Spring.GiveOrderToUnit(unitID2, CMD.MOVE, {x2 - 65, y2, z2-65}, {})
+								last_x2 = nil
+								last_z2 = nil
+								lastCheckMinutes = nil
+								lastMovedMinutes = Spring.GetGameSeconds() / 60
+								movedUnitID = unitID2
+							else
 								last_x2 = x2
 								last_z2 = z2
-								last_check_minutes = Spring.GetGameSeconds() / 60
-							elseif Spring.GetGameSeconds() / 60 - last_check_minutes > 0.03 then
-								if math.abs(x2 - last_x2) < 3 and math.abs(z2 - last_z2) < 3 then
-									-- unit has been stationary for a few seconds, force it out of the way.
-									Spring.GiveOrderToUnit(unit_id2, CMD.MOVE, {x2 - 65, y2, z2-65}, {})
-									last_x2 = nil
-									last_z2 = nil
-									last_check_minutes = nil
-									last_moved_minutes = Spring.GetGameSeconds() / 60
-									moved_unit_id = unit_id2
-								else
-									last_x2 = x2
-									last_z2 = z2
-									last_check_minutes = Spring.GetGameSeconds() / 60
-								end
+								lastCheckMinutes = Spring.GetGameSeconds() / 60
 							end
 						end
 					end
@@ -122,7 +107,7 @@ end
 
 function widget:GameFrame(n)	
 	if ((n%120)<1) then
-		fix_obstructed_lab()
+		fixObstructedLab()
 	end
 end
 
@@ -134,4 +119,5 @@ function widget:Initialize()
   	end
 
 end
+
 
