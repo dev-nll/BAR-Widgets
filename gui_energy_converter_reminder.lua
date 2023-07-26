@@ -182,6 +182,11 @@ local function updateUI()
         area[3] = area[3] - widthDiff
     end
 
+    if WG['converter_usage'] ~= nil then
+	area[1] = area[1] + WG['converter_usage'].GetWidth() + 8
+	area[3] = area[3] + WG['converter_usage'].GetWidth() + 8
+    end
+	
     if dlistCU ~= nil then
         glDeleteList(dlistCU)
     end
