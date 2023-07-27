@@ -40,7 +40,7 @@ function widget:Update()
 	recentlyUnloaded = nil
 	
 	local hasSeenValidCommandToPreserve = false
-	-- restore unit's command queue (except for initial move commands)
+	-- restore unit's command queue (except for initial move/guard commands)
 	for i, cmd in ipairs(oldBuildQueue) do
 		if cmd['id'] ~= CMD.MOVE and cmd['id'] ~= CMD.GUARD then
 			hasSeenValidCommandToPreserve = true
