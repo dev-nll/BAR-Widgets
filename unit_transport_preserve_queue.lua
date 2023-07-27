@@ -39,13 +39,13 @@ function widget:Update()
 	oldBuildQueue = recentlyUnloaded[2]
 	recentlyUnloaded = nil
 	
-	local hasSeenNonMoveCommand = false
+	local hasSeenValidCommandToPreserve = false
 	-- restore unit's command queue (except for initial move commands)
 	for i, cmd in ipairs(oldBuildQueue) do
-		if cmd['id'] ~= CMD.MOVE then
-			hasSeenNonMoveCommand = true
+		if cmd['id'] ~= CMD.MOVE and cmd['id'] ~= CMD.GUARD then
+			hasSeenValidCommandToPreserve = true
 		end
-		if hasSeenNonMoveCommand then		
+		if hasSeenValidCommandToPreserve then		
 			Spring.GiveOrderToUnit(unitID, CMD.INSERT, { -1, cmd['id'], CMD.OPT_SHIFT, cmd['params'][1], cmd['params'][2], cmd['params'][3], cmd['params'][4] }, { 'alt' })
 		end
 	end	
