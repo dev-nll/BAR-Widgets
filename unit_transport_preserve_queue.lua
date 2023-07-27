@@ -1,7 +1,7 @@
 function widget:GetInfo()
     return {
         name = "Unit Transport Preserve (Command) Queue",
-        desc = "Restores command queue of units after they are unloaded from air transport. Initial move commands in the unit's command queue are discarded.",
+        desc = "Restores command queue of units after they are unloaded from air transport. Initial move/guard commands in the unit's command queue are discarded.",
         author = "IM1",
         date = "July 2023",
         license = "GNU GPL, v2 or later",
