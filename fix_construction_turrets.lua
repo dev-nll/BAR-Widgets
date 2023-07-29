@@ -3,7 +3,7 @@ function widget:GetInfo()
         name = "Fix Construction Turrets",
         desc = "Prevents nanos from (1) guarding/repairing/reclaiming/rezzing units outside of its range, (2) guarding an idle lab, and (3) guarding buildings that can't make units.",
         author = "IM1",
-        date = "June 2023",
+        date = "July 2023",
         license = "GNU GPL, v2 or later",
         enabled = true
     }
