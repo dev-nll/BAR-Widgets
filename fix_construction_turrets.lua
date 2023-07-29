@@ -10,11 +10,53 @@ function widget:GetInfo()
 end
 
 
+nanos = {}
+function newUnit(unitID, unitDefID, unitTeam)
+	if unitTeam ~= Spring.GetMyTeamID() then
+		return
+	end
+	UD = UnitDefs[Spring.GetUnitDefID(unitID)]
+	if UD == nil then
+		return
+	end
+	if UD.canAssist and UD.isStaticBuilder and not UD.isBuilding and not UD.isFactory and (UD.metalCost < 400) then
+		nanos[unitID] = unitID
+	end
+end
+
+function widget:UnitCreated(unitID, unitDefID, unitTeam)
+	newUnit(unitID, unitDefID, unitTeam)
+end
+
+function widget:UnitDestroyed(unitID, unitDefID, unitTeam, attackerID, attackerDefID, attackerTeam)
+	nanos[unitID] = nil
+end
+
+function widget:UnitTaken(unitID, unitDefID, oldTeam, newTeam)
+	if oldTeam == Spring.GetMyTeamID() then
+		nanos[unitID] = nil
+	else
+		newUnit(unitID, unitDefID, newTeam)
+	end
+end
+
+
+
+
+
+
+-- stop nanos messing up to begin with
 function widget:UnitCommand(unitID, unitDefID, unitTeam, cmdID, cmdParams, cmdOpts, cmdTag)
+	if unitID == nil then
+		return
+	end
 	if unitDefID == nil then
 		return
 	end
 	UD = UnitDefs[unitDefID]
+	if UD == nil then
+		return
+	end
 	if not UD.canAssist or not UD.isStaticBuilder then
 		-- isn't a construction turret
 		return
@@ -23,7 +65,7 @@ function widget:UnitCommand(unitID, unitDefID, unitTeam, cmdID, cmdParams, cmdOp
 	if target_unit_id == nil then
 		return
 	end
-	if cmdID ~= 25 and cmdID ~= 40 and cmdID ~= 90 and cmdID ~= 125 then
+	if cmdID ~= CMD.GUARD and cmdID ~= CMD.REPAIR and cmdID ~= CMD.RECLAIM and cmdID ~= CMD.RESURRECT then
 		-- isn't a guard or repair or reclaim or rezz command
 		return
 	end
@@ -31,18 +73,19 @@ function widget:UnitCommand(unitID, unitDefID, unitTeam, cmdID, cmdParams, cmdOp
 		-- area command
 		return
 	end
-	if cmdID == 25 then		
+	if cmdID == CMD.GUARD then		
 		local target_UD = UnitDefs[Spring.GetUnitDefID(target_unit_id)]
 		if target_UD == nil then
 			return
 		end
 		if not target_UD.isBuilder then
-			-- guarding idle lab, issue stop command
+			-- trying to guard something that isn't a lab, issue stop command
 			Spring.GiveOrderToUnit(unitID, CMD.STOP, {}, {} )
 			return
 		end
 	end
-	if Spring.GetUnitSeparation(target_unit_id, unitID, true) > UD.buildDistance then
+	local unitSeparation = Spring.GetUnitSeparation(target_unit_id, unitID, true)
+	if UD.buildDistance == nil or unitSeparation == nil or unitSeparation > UD.buildDistance then
 		-- impossible command detected, issue stop command.
 		Spring.GiveOrderToUnit(unitID, CMD.STOP, {}, {} )
 		return
@@ -50,25 +93,36 @@ function widget:UnitCommand(unitID, unitDefID, unitTeam, cmdID, cmdParams, cmdOp
 end
 
 
-function stop_nanos_guarding_idle_lab()
-	local all_my_units = Spring.GetTeamUnits(Spring.GetMyTeamID())
-	for i,unit_id in ipairs(all_my_units) do
-		UD = UnitDefs[Spring.GetUnitDefID(unit_id)]
-		local name = UD.name
-		if UD.canAssist and UD.isStaticBuilder and not UD.isBuilding and not UD.isFactory and (UD.metalCost < 400) then
-			local command_queue = Spring.GetCommandQueue(unit_id, 0)
-			local is_nano_busy = command_queue == 1
-			if is_nano_busy then
-				local all_commands = Spring.GetUnitCommands(unit_id, 1)
-				if all_commands[1]['id'] == CMD.GUARD then
-					target_unit_id = all_commands[1]['params'][1]
-					target_UD = UnitDefs[Spring.GetUnitDefID(target_unit_id)]
-					if target_UD.isBuilding then
-						local target_command_queue = Spring.GetCommandQueue(target_unit_id, 0)
-						local is_target_busy = target_command_queue == 1
-						if not is_target_busy then
-							Spring.GiveOrderToUnit(unit_id, CMD.STOP, {}, {} )
-						end
+
+
+
+
+-- fix remaining nanos that have messed up
+function fixNanosAfterTheFact()
+	for _, unitID in pairs(nanos) do
+		local allCommands = Spring.GetUnitCommands(unitID, 1)
+		--Spring.Echo(dump(allCommands))
+		if allCommands ~= nil and #allCommands > 0 then
+			if allCommands[1]['id'] == CMD.GUARD or allCommands[1]['id'] == CMD.REPAIR then
+				-- stop nanos assisting beyond range
+				targetUnitID = allCommands[1]['params'][1]
+				if targetUnitID ~= nil then
+					if Spring.GetUnitSeparation(unitID, targetUnitID, true) > UnitDefs[Spring.GetUnitDefID(unitID)].buildDistance then
+						Spring.GiveOrderToUnit(unitID, CMD.STOP, {}, {} )
+					end
+				end
+				-- stop nanos assisting idle lab
+				targetUD = UnitDefs[Spring.GetUnitDefID(targetUnitID)]
+				if targetUnitID ~= nil and allCommands[1]['id'] == CMD.GUARD then
+					local targetCommandQueue = Spring.GetCommandQueue(targetUnitID, 0) -- note brand new idle lab == 0 if no units produced yet
+					local isTargetBusy = false
+					if targetUD.isBuilding and targetCommandQueue == 1 then
+						isTargetBusy = true
+					elseif not targetUD.isBuilding then
+						isTargetBusy = targetCommandQueue > 1 or (targetCommandQueue == 1 and Spring.GetUnitCommands(targetUnitID, 1)[1]['id'] ~= CMD.GUARD)
+					end
+					if not isTargetBusy then
+						Spring.GiveOrderToUnit(unitID, CMD.STOP, {}, {} )
 					end
 				end
 			end
@@ -77,14 +131,12 @@ function stop_nanos_guarding_idle_lab()
 end
 
 
-
-
-function widget:GameFrame(n)	
-	if ((n%1201) < 1) then
-		-- poll irregularly to reduce performance impact.
-		stop_nanos_guarding_idle_lab()
+function widget:GameFrame(n)
+	if ((n%301) < 1) then
+		fixNanosAfterTheFact()
 	end
 end
+
 
 
 function widget:Initialize()
