@@ -2,19 +2,25 @@ function widget:GetInfo()
     return {
         name = "Unit Transport Preserve (Command) Queue",
         desc = "Restores command queue of units after they are unloaded from air transport. Initial move/guard commands in the unit's command queue are discarded.",
-        author = "IM1",
+        author = "IM1, DrWizzard",
         date = "July 2023",
         license = "GNU GPL, v2 or later",
-		version = 0.2,
+		version = 0.3,
         layer = -1,
         enabled = true
     }
 end
 
+local CMD_MOVE = CMD.MOVE
+local CMD_GUARD = CMD.GUARD
+local CMD_WAIT = CMD.WAIT
+local CMD_INSERT = CMD.INSERT
+local CMD_OPT_SHIFT = CMD.OPT_SHIFT
+local spGiveOrderArrayToUnit = Spring.GiveOrderArrayToUnit
+local spGetCommandQueue = Spring.GetCommandQueue
 
-
-local recentlyUnloaded = nil
-
+local player_team_id = Spring.GetLocalTeamID()
+local recentlyUnloaded = {}
 
 function widget:Initialize()
 	if Spring.GetSpectatingState() then
@@ -22,33 +28,38 @@ function widget:Initialize()
 	end
 end
 
-
-
 function widget:UnitUnloaded(unitID, unitDefID, unitTeam, transportID, transportTeam)
-	if unitTeam == Spring.GetMyTeamID() then
-		recentlyUnloaded = {unitID, Spring.GetCommandQueue(unitID, -1)}
+	if unitTeam == player_team_id then
+		local commands = spGetCommandQueue(unitID, -1)
+		if commands and commands[1] and commands[1].id==CMD_WAIT then
+			return
+		end
+		recentlyUnloaded[#recentlyUnloaded + 1] = {unitID, commands}
 	end
 end
 
 function widget:Update()
-	if recentlyUnloaded == nil then
+	if #recentlyUnloaded == 0 then
 		return
 	end
-	
-	unitID = recentlyUnloaded[1]
-	oldBuildQueue = recentlyUnloaded[2]
-	recentlyUnloaded = nil
-	
-	local hasSeenValidCommandToPreserve = false
-	-- restore unit's command queue (except for initial move/guard commands)
-	for i, cmd in ipairs(oldBuildQueue) do
-		if cmd['id'] ~= CMD.MOVE and cmd['id'] ~= CMD.GUARD then
-			hasSeenValidCommandToPreserve = true
+	for j=1, #recentlyUnloaded do
+		local kvp = recentlyUnloaded[j]
+		local unitID = kvp[1]
+		local oldBuildQueue = kvp[2]
+		if oldBuildQueue ~= nil then
+			local orders = {}
+			local hasSeenValidCommandToPreserve = false
+			for i = 1, #oldBuildQueue do
+				local cmd = oldBuildQueue[i]
+				if cmd['id'] ~= CMD_MOVE and cmd['id'] ~= CMD_GUARD then
+					hasSeenValidCommandToPreserve = true
+				end
+				if hasSeenValidCommandToPreserve then	
+					orders[#orders+1] = {cmd.id, cmd.params, cmd.options}
+				end
+			end
+			spGiveOrderArrayToUnit(unitID, orders)	
 		end
-		if hasSeenValidCommandToPreserve then		
-			Spring.GiveOrderToUnit(unitID, CMD.INSERT, { -1, cmd['id'], CMD.OPT_SHIFT, cmd['params'][1], cmd['params'][2], cmd['params'][3], cmd['params'][4] }, { 'alt' })
-		end
-	end	
+	end
+	recentlyUnloaded = {}
 end
-
-
