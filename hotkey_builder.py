@@ -1,3 +1,10 @@
+# This script generates a chain of exclusions that you can use in your hotkeys. For example, the default settings
+# in this script will find all units that (1) have a description that contains the substring 'Constr' or 'Combat Engineer'
+# and (2) have a description that does not contain the substring 'Tech 2'. This leaves all t1 constructors. 
+# It then uses this to generate the exclusions filter Not_IdMatches_armaap_Not_IdMatches_armaca_Not_IdMatches_armack ...
+# , which you can use as part of a Filter in a custom keybind.
+
+
 import requests
 
 
@@ -6,13 +13,11 @@ url = "https://raw.githubusercontent.com/beyond-all-reason/Beyond-All-Reason/mas
 
 
 
-
-# string matching params. 
-# this default example will keep any description with substring "Con" and filter out any description with substring "Tech 2" when constructing the string Not_IdMatches_%s
 names_to_match = {}
-descriptions_to_match = {'Con'}
+descriptions_to_match = {'Constr', 'Combat Engineer'}
 names_to_avoid = {}
 descriptions_to_avoid = {'Tech 2'}
+
 
 
 
@@ -34,9 +39,10 @@ def find_matching_names(json_data):
     for name_key in names_data.keys():
         name_value = names_data[name_key]
 
-        if all(match in name_value for match in names_to_match) and not any(avoid in name_value for avoid in names_to_avoid):
+        if (not len(names_to_match) or any(match in name_value for match in names_to_match)) and not any(avoid in name_value for avoid in names_to_avoid):
             description = descriptions_data.get(name_key)
-            if description and all(match in description for match in descriptions_to_match) and not any(avoid in description for avoid in descriptions_to_avoid):
+            if description and (not len(descriptions_to_match) or any(match in description for match in descriptions_to_match)) and not any(avoid in description for avoid in descriptions_to_avoid):
+                print("Adding {} with name={} and description={}".format(name_key, name_value, description))
                 matching_names.append(name_key)
     return matching_names
 
@@ -48,6 +54,7 @@ if __name__ == "__main__":
         if not len(matching_names):
             print("couldn't find matches")
         else:
+            print('\nGot these exclusions:\n')
             print('_'.join(['Not_IdMatches_' + i for i in matching_names]))
     except Exception as e:
         print(f"Error: {e}")
