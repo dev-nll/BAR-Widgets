@@ -3,6 +3,11 @@
 # and (2) have a description that does not contain the substring 'Tech 2'. This leaves all t1 constructors. 
 # It then uses this to generate the exclusions filter Not_IdMatches_armaap_Not_IdMatches_armaca_Not_IdMatches_armack ...
 # , which you can use as part of a Filter in a custom keybind.
+# 
+# To run this script, save it to a directory, open command prompt, navigate to that directory in command prompt, then run
+# python hotkey_exclusions_builder.py
+# 
+# You can then copy and paste the exclusions from the terminal into your hotkey file.
 
 
 import requests
