@@ -13,6 +13,11 @@ end
 
 local CMD_MOVE = CMD.MOVE
 local CMD_GUARD = CMD.GUARD
+local CMD_LOAD_UNITS = CMD.LOAD_UNITS
+local CMD_LOAD_ONTO = CMD.LOAD_ONTO
+local CMD_FIGHT = CMD.FIGHT
+local CMD_RECLAIM = CMD.RECLAIM
+local CMD_REPAIR = CMD.REPAIR
 local CMD_WAIT = CMD.WAIT
 local CMD_INSERT = CMD.INSERT
 local CMD_OPT_SHIFT = CMD.OPT_SHIFT
@@ -51,7 +56,7 @@ function widget:Update()
 			local hasSeenValidCommandToPreserve = false
 			for i = 1, #oldBuildQueue do
 				local cmd = oldBuildQueue[i]
-				if cmd['id'] ~= CMD_MOVE and cmd['id'] ~= CMD_GUARD then
+				if cmd['id'] ~= CMD_MOVE and cmd['id'] ~= CMD_GUARD and cmd['id'] ~= CMD_LOAD_UNITS and cmd['id'] ~= CMD_LOAD_ONTO and cmd['id'] ~= CMD_FIGHT and cmd['id'] ~= CMD_RECLAIM and cmd['id'] ~= CMD_REPAIR then
 					hasSeenValidCommandToPreserve = true
 				end
 				if hasSeenValidCommandToPreserve then	
