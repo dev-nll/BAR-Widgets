@@ -29,7 +29,7 @@ local recentlyUnloaded = {}
 
 function widget:Initialize()
 	if Spring.GetSpectatingState() then
-		widgetHandler:removeWidget()
+		widgetHandler:RemoveWidget()
 	end
 end
 
