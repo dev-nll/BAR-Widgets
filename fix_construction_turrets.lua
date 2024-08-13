@@ -84,7 +84,7 @@ function widget:UnitCommand(unitID, unitDefID, unitTeam, cmdID, cmdParams, cmdOp
 			return
 		end
 	end
-	local unitSeparation = Spring.GetUnitSeparation(target_unit_id, unitID, true)
+	local unitSeparation = Spring.GetUnitSeparation(target_unit_id, unitID, true, true)
 	if UD.buildDistance == nil or unitSeparation == nil or unitSeparation > UD.buildDistance then
 		-- impossible command detected, issue stop command.
 		Spring.GiveOrderToUnit(unitID, CMD.STOP, {}, {} )
@@ -107,7 +107,7 @@ function fixNanosAfterTheFact()
 				-- stop nanos assisting beyond range
 				targetUnitID = allCommands[1]['params'][1]
 				if targetUnitID ~= nil then
-					if Spring.GetUnitSeparation(unitID, targetUnitID, true) > UnitDefs[Spring.GetUnitDefID(unitID)].buildDistance then
+					if Spring.GetUnitSeparation(unitID, targetUnitID, true, true) > UnitDefs[Spring.GetUnitDefID(unitID)].buildDistance then
 						Spring.GiveOrderToUnit(unitID, CMD.STOP, {}, {} )
 					end
 				end
